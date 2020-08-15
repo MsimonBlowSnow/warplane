@@ -1,7 +1,7 @@
 /* 
 	定义背景图片的运动
  */
-@keyframes bg1{
+/* @keyframes bg1{
 	0%{
 		top: 0px;
 	}
@@ -27,5 +27,16 @@
 	}
 	100%{
 		top: 568px;
+	}
+} */
+@keyframes enemy1boom{
+	0%{
+		background-image: url(../image/smallboom.gif);
+	}
+	99%{
+		background-image: url(../image/smallboom.gif);
+	}
+	100%{
+		background-image: url(../image/boom.png);
 	}
 }

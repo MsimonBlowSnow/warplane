@@ -1,10 +1,6 @@
-
-
 function setattr(node,style,val){
 	node.style[style] = val;
 }
-
-
 window.onload = function(){
 	let bg1 = document.getElementsByClassName("first")[0];
 	let bg2 = document.getElementsByClassName("second")[0];
@@ -17,6 +13,9 @@ window.onload = function(){
 	let iscreateEnemy = false;
 	let enemyarrs = [];
 	let buttetarrs = [];
+	let score = 0;
+	let startbgInt;
+	let p = document.getElementsByTagName("p")[0];
 	let constObj = {
 		windowW,
 		marginX
@@ -29,7 +28,9 @@ window.onload = function(){
 			this.x = 0;
 			this.y = -12;
 			this.isalive = true;
+			this.isdying = false;
 			this.template = null;
+			this.clearTimer = 0;
 		}
 		create(){
 			this.x = (Math.floor(Math.random()*303)+17);
@@ -44,13 +45,13 @@ window.onload = function(){
 			this.template.style.display = "block";
 			return this.template;
 		}
-		move(father){
+		move(){
 			// console.log(this.template);
 				this.islive = setInterval(()=>{
 					if(Buttet.startflag){
 						if(this.y>580){
 							clearInterval(this.islive);
-							father.removeChild(this.template);
+							main.removeChild(this.template);
 							delete this;
 						}
 						this.y+=10;
@@ -60,22 +61,47 @@ window.onload = function(){
 				},200);
 		}
 		isshoted(buttets){
-			let leftx = this.x-17;
-			let rightx = this.x +17;
-			let topy = this.y-12;
-			let bottomy = this.y+12;
-			if((buttets.x>leftx-3&&buttets.x<rightx+3)
-				&&(buttets.y<bottomy+6&&buttets.y>topy-6)
-			){
-				// alert("你已经死了");
-				this.isalive = false;
-				return true;
+			if(this.isalive){
+				let leftx = this.x-17;
+				let rightx = this.x +17;
+				let topy = this.y-12;
+				let bottomy = this.y+12;
+				if((buttets.x>leftx-3&&buttets.x<rightx+3)
+					&&(buttets.y<bottomy+6&&buttets.y>topy-6)
+				){
+					// alert("你已经死了");
+					this.isalive = false;
+					return true;
+				}
 			}
 		}
-		isdie = function(father){
-			clearInterval(this.islive);
-			father.removeChild(this.template);
-			delete this;
+		isdie(){
+			if(!this.isdying){
+				score++;
+				this.isdying = true;
+				this.template.classList.add('enemy1boom');
+				this.clearTimer = setTimeout(()=>{
+					clearInterval(this.islive);
+					main.removeChild(this.template);
+					delete this;
+				},1000);
+				p.innerText = `成绩: ${score}`;
+			}
+			
+		}
+		
+		static init(){
+			for (let item of enemyarrs) {
+				if(item instanceof Enemy){
+					clearTimeout(item.clearTimer);
+					item.clearTimer = null;
+					clearInterval(item.islive);
+					item.islive = null;
+					main.removeChild(item.template);
+					delete this
+				}
+				
+			}
 		}
 	}
 	
@@ -118,7 +144,7 @@ window.onload = function(){
 							}
 						}
 						if(dindex>-1){
-							enemyarrs[dindex].isdie(father);
+							enemyarrs[dindex].isdie();
 							enemyarrs.splice(dindex,1);
 						}
 							
@@ -153,6 +179,21 @@ window.onload = function(){
 			}
 			
 		}
+		static init(){
+			for (let item of buttetarrs) {
+				if(item instanceof Buttet){
+					clearInterval(item.flyflag);
+					item.flyflag = null;
+					main.removeChild(item.template);
+					let myindex =-1;
+					myindex = buttetarrs.indexOf(item);
+					if(myindex>-1){
+						buttetarrs.splice(myindex,1);
+					}
+				}
+			}
+			
+		}
 	}
 	/* 飞机(我方) */
 	let my={
@@ -178,19 +219,22 @@ window.onload = function(){
 				document.onmousemove = function(e){
 					my.fly(e);
 				}
-					
 		},
 		stop: function(){
 			document.onmousemove = null;
 			// console.log("清楚事件")
 		},
 		init:function(enemyarrs){
+			my.node.style.left = '160px';
+			my.node.style.top = '284px';
 			setattr(my.node,'display','block');
 			my.mefly();
 			my.shot(enemyarrs);
+			my.iscoll(enemyarrs);
 		},
+		iscolltimer: null,
 		node: me,
-		shot: function(enemyarrrs){
+		shot: function(enemyarrs){
 				if(this.isshot){
 					return 0;
 				}
@@ -204,11 +248,40 @@ window.onload = function(){
 					// console.log(buttet);
 					}
 				},200);
+		},
+		iscoll: function(enemyarrs){
+			if(!this.iscolltimer){
+				this.iscolltimer = setInterval(()=>{
+						let y = Number.parseInt(my.node.style.top);
+						let x = Number.parseInt(my.node.style.left);
+						for (let item of enemyarrs) {
+							//width: 34px; height: 24px; 66 80
+							if(item instanceof Enemy && item.isalive){
+								// console.log(x,y,item.x,item.y);
+								// console.log(my.node.style.left);
+								if((item.x>x-50&&item.x<x+50)&&(item.y>y-52&&item.y<y+52)){
+									alert(`游戏结束,你本次得分${score}`);
+									init();
+									return ;
+								}
+							}
+						}
+				},10);
+			}
+		},
+		
+		gameOver: function(){
+			this.node.style.display = "none";
+			//清除自己的定时器
+			clearInterval(my.iscolltimer);
+			this.iscolltimer = null;
+			clearInterval(this.isshot);
+			this.isshot = null;
 		}
 	};
 	
 	function startbg(){
-		let startbgInt = setInterval(()=>{
+			startbgInt = setInterval(()=>{
 			let top1 = Number.parseInt(bg1.style.top);
 			let top2 = Number.parseInt(bg2.style.top);
 			if(top1<567){
@@ -239,7 +312,6 @@ window.onload = function(){
 					Buttet.startflag = false;
 					console.log(enemyarrs);
 				}
-				
 			},true);
 	}
 	
@@ -252,7 +324,6 @@ window.onload = function(){
 					if(!iscreateEnemy){
 						iscreateEnemy = setInterval(()=>{
 							if(startflag){
-								console.log("我去")
 								let enemy = new Enemy();
 								let enemyDom = enemy.create();
 								main.appendChild(enemyDom);
@@ -266,12 +337,26 @@ window.onload = function(){
 		})
 		stop();
 	}
-	
-	/* 清除暂停时清除时间 */
-	function clearthing(){
-		me.removeEventListener();
-	}
 
+	function init(){
+		let sonNodes = main.childNodes;
+		my.node.style.display = "none";
+		stbutton.style.display = "block";
+		console.log('执行了');
+		//清除产生敌机定时器
+		clearInterval(iscreateEnemy);
+		iscreateEnemy = null;
+		//清除背景运动
+		clearInterval(startflag);
+		startflag = null;
+		score = 0;
+		p.innerText =`成绩: ${score}`;
+		Enemy.init();
+		Buttet.init();
+		my.gameOver();
+		enemyarrs = [];
+		buttetarrs = [];
+	}
 	/* 产生敌机 */
 	start();
 }
